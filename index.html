@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8" />
+<title>🇳🇵 Tourez — Explore Nepal. Plan Everything. Travel Smarter.</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet" />
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+    <!--  NAVBAR  -->
+    <header class="navbar" id="navbar">
+        <div class="nav-inner">
+<a href="#" class="brand" data-i18n-scope="brand">🇳🇵 <span>Tourez</span></a>
+            <nav class="nav-links" id="navLinks" aria-label="Main navigation">
+                <a href="#explore" class="nav-link" data-i18n="nav_explore" data-translate>Explore</a>
+                <a href="#assistant" class="nav-link" data-i18n="nav_assistant">AI Travel Assistant</a>
+                <a href="#planner" class="nav-link" data-i18n="nav_planner">Trip Planner</a>
+                <a href="#currency" class="nav-link" data-i18n="nav_currency">Currency</a>
+                <a href="#wallet" class="nav-link nav-wallet-link">👛 Wallet <span class="nav-wallet-balance" id="navWalletBalance">रू 0</span></a>
+            </nav>
+            <div class="nav-tools">
+                <!-- Language selector -->
+                <div class="lang-select-wrap">
+                    <select id="langSelect" class="lang-select" aria-label="Select language" title="Select language">
+                        <option value="en">English</option>
+                        <option value="ne">नेपाली</option>
+                        <option value="hi">हिन्दी</option>
+                        <option value="bn">বাংলা</option>
+                        <option value="es">Español</option>
+                        <option value="fr">Français</option>
+                        <option value="de">Deutsch</option>
+                        <option value="ja">日本語</option>
+                        <option value="zh">中文</option>
+                    </select>
+                </div>
+                <!-- Theme toggle -->
+                <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark / light mode" title="Toggle theme">
+                    <span class="icon-sun">☀️</span>
+                    <span class="icon-moon">🌙</span>
+                </button>
+                <!-- Mobile menu -->
+                <button class="hamburger" id="hamburger" aria-label="Open navigation menu" aria-expanded="false">
+                    <span></span><span></span><span></span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- HERO -->
+    <section class="hero" id="hero">
+        <div class="hero-bg" aria-hidden="true"></div>
+        <div class="hero-content">
+<span class="hero-eyebrow" data-i18n="hero_eyebrow">🇳🇵 Discover Nepal. One intelligent assistant.</span>
+            <h1 class="hero-title" data-i18n="hero_title">Explore Nepal. Plan Everything. <span class="grad">Travel Smarter.</span></h1>
+            <p class="hero-subtitle" data-i18n="hero_subtitle">
+                Your AI-powered travel companion for discovering destinations, understanding local culture,
+                checking real-time conditions, finding essential services, and planning personalized trips.
+            </p>
+
+            <!-- Destination search -->
+            <div class="hero-search" id="heroSearch">
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input
+                        type="text"
+                        id="destinationInput"
+                        class="search-input"
+                        placeholder="Where do you want to explore?"
+                        autocomplete="off"
+                        data-i18n-ph="search_placeholder"
+                        aria-label="Search destinations"
+                    />
+                    <button class="btn btn-primary btn-locate" id="useMyLocation" title="Use my location">
+                        📍 <span data-i18n="use_location">Use My Location</span>
+                    </button>
+                </div>
+                <div class="search-suggestions" id="searchSuggestions" aria-live="polite"></div>
+            </div>
+
+            <div class="hero-cta">
+                <button class="btn btn-primary btn-lg" id="exploreBtn" data-i18n="hero_explore_btn">Explore Destination</button>
+                <button class="btn btn-outline btn-lg" id="askAiBtn" data-i18n="hero_ask_btn">🤖 Ask AI</button>
+                <a class="btn btn-wallet btn-lg" id="openWalletBtn" href="#wallet">👛 Open Wallet</a>
+            </div>
+
+            <div class="hero-highlights" aria-label="Key product features">
+                <div class="hero-highlight-card">
+                    <span class="hero-highlight-icon">🗺️</span>
+                    <div>
+                        <strong>Local Discovery</strong>
+                        <span>Find hidden places, local services, and routes across Nepal</span>
+                    </div>
+                </div>
+                <div class="hero-highlight-card">
+                    <span class="hero-highlight-icon">🌦️</span>
+                    <div>
+                        <strong>Travel with Context</strong>
+                        <span>Weather, safety, culture, and practical local guidance</span>
+                    </div>
+                </div>
+                <div class="hero-highlight-card">
+                    <span class="hero-highlight-icon">✨</span>
+                    <div>
+                        <strong>Nepal-first Planning</strong>
+                        <span>Personalized itineraries for mountains, cities, heritage, and food</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <div class="hero-scroll" aria-hidden="true"><span></span></div>
+    </section>
+
+    <!-- DESTINATION / MAP SECTION -->
+    <section class="section explore-section" id="explore">
+        <div class="section-head">
+            <div>
+                <h2 class="section-title" data-i18n="explore_title">Explore Your Destination</h2>
+                <p class="section-sub" data-i18n="explore_sub">Select a destination and explore nearby places, weather, and culture.</p>
+            </div>
+            <div class="destination-chips" id="destinationChips">
+                <button class="chip active" data-dest="Pokhara">Pokhara</button>
+                <button class="chip" data-dest="Kathmandu">Kathmandu</button>
+                <button class="chip" data-dest="Chitwan">Chitwan</button>
+                <button class="chip" data-dest="Lumbini">Lumbini</button>
+                <button class="chip" data-dest="Mustang">Mustang</button>
+            </div>
+        </div>
+
+        <div class="explore-layout">
+
+            <div class="dest-panel">
+                <div id="destinationPanel"></div>
+            </div>
+
+            <div class="map-weather">
+                <div class="map-wrap">
+                    <div id="travelMap" class="travel-map" role="application" aria-label="Interactive tourism map"></div>
+                    <div class="map-overlay-top" id="mapOverlayTop">
+                        <div class="map-search-box">
+                            <input type="text" id="mapSearchInput" placeholder="Search nearby places..." aria-label="Search on map" />
+                        </div>
+                        <div id="mapFilters" class="map-filters" aria-label="Filter place categories"></div>
+                    </div>
+                    <div class="map-controls" id="mapControls" aria-label="Map controls">
+                        <button class="map-control" data-map-action="zoomIn" aria-label="Zoom in">+</button>
+                        <button class="map-control" data-map-action="zoomOut" aria-label="Zoom out">−</button>
+                        <button class="map-control" data-map-action="locate" aria-label="Use my location">📍</button>
+                    </div>
+                    <div id="placePopup"></div>
+                </div>
+                <div id="weatherCard" class="weather-card"></div>
+            </div>
+        </div>
+
+        <div class="places-section">
+            <h3 class="places-title" data-i18n="places_title">Nearby Places</h3>
+            <div id="placesList" class="places-list"></div>
+        </div>
+    </section>
+
+    <!-- AI ASSISTANT -->
+    <section class="section ai-section" id="assistant">
+        <div class="section-head">
+            <div>
+<h2 class="section-title" data-i18n="assistant_title">🧞 Tourez AI Assistant</h2>
+                <p class="section-sub" data-i18n="assistant_sub">Your intelligent travel companion. Ask anything about this destination.</p>
+            </div>
+            <div id="aiContextBadge" class="ai-context-badge">📍 Exploring <strong>Pokhara, Nepal</strong></div>
+        </div>
+
+        <div class="ai-layout">
+            <!-- Suggested prompts -->
+            <aside class="prompts-panel" id="promptsPanel">
+                <h4 class="prompts-heading" data-i18n="suggested_prompts">Suggested Prompts</h4>
+                <div id="suggestedPrompts"></div>
+            </aside>
+
+            <!-- Chat -->
+            <div class="chat-card">
+                <div class="chat-header">
+                    <span class="ai-avatar">🧞</span>
+                    <div>
+                        <strong>Tourez AI</strong>
+                        <span class="ai-status" id="aiStatus">📍 Online · Pokhara</span>
+                    </div>
+                    <button class="chat-clear" id="clearChat" data-i18n="clear_chat">Clear</button>
+                </div>
+                <div class="chat-messages" id="chatMessages" aria-live="polite"></div>
+                <div class="chat-input-row">
+                    <input
+                        type="text"
+                        id="chatInput"
+                        class="chat-input"
+                        placeholder="Ask anything about your trip..."
+                        aria-label="Type your message"
+                    />
+                    <button class="btn btn-primary send-btn" id="sendBtn" aria-label="Send message">➤</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- TRIP PLANNER -->
+    <section class="section planner-section" id="planner">
+        <div class="section-head">
+            <div>
+                <h2 class="section-title" data-i18n="planner_title"> AI Trip Planner</h2>
+                <p class="section-sub" data-i18n="planner_sub">Tell us your preferences and we'll craft a personalized itinerary with AI.</p>
+            </div>
+        </div>
+
+        <div class="planner-layout">
+            <div class="planner-form" id="plannerForm">
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label for="planDest" data-i18n="planner_dest">Destination</label>
+                        <input type="text" id="planDest" value="Pokhara" />
+                    </div>
+                    <div class="form-field">
+                        <label for="planDuration" data-i18n="planner_duration">Duration (days)</label>
+                        <input type="number" id="planDuration" value="3" min="1" max="14" />
+                    </div>
+                    <div class="form-field">
+                        <label for="planTravelers" data-i18n="planner_travelers">Travelers</label>
+                        <input type="number" id="planTravelers" value="2" min="1" />
+                    </div>
+                    <div class="form-field">
+                        <label for="planBudget" data-i18n="planner_budget">Budget</label>
+                        <input type="number" id="planBudget" value="300" min="0" />
+                    </div>
+                    <div class="form-field">
+                        <label for="planCurrency" data-i18n="planner_currency">Currency</label>
+                        <select id="planCurrency">
+                            <option value="USD" selected>USD</option>
+                            <option value="NPR">NPR</option>
+                            <option value="INR">INR</option>
+                            <option value="EUR">EUR</option>
+                            <option value="GBP">GBP</option>
+                            <option value="JPY">JPY</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-field">
+                    <span class="label" data-i18n="planner_interests">Interests</span>
+                    <div class="interest-chips" id="interestChips">
+                        <button type="button" class="chip toggle" data-interest="Nature"> Nature</button>
+                        <button type="button" class="chip toggle" data-interest="Food"> Food</button>
+                        <button type="button" class="chip toggle" data-interest="Culture"> Culture</button>
+                        <button type="button" class="chip toggle" data-interest="History"> History</button>
+                        <button type="button" class="chip toggle" data-interest="Adventure"> Adventure</button>
+                        <button type="button" class="chip toggle" data-interest="Shopping"> Shopping</button>
+                        <button type="button" class="chip toggle" data-interest="Photography"> Photography</button>
+                        <button type="button" class="chip toggle" data-interest="Relaxation"> Relaxation</button>
+                    </div>
+                </div>
+                <button class="btn btn-primary btn-lg btn-block" id="planTripBtn"> Plan My Trip</button>
+            </div>
+
+            <div class="itinerary-panel" id="itineraryPanel">
+                <div class="itinerary-empty" id="itineraryEmpty">
+                    <span class="empty-icon">🧳</span>
+                    <p data-i18n="planner_empty">Fill in your preferences and let AI plan your perfect itinerary.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- TOUREZ WALLET -->
+    <section class="section wallet-section" id="wallet">
+        <div class="section-head wallet-section-head">
+            <div>
+                <span class="section-kicker">TOUREZ PAY</span>
+                <h2 class="section-title">👛 Tourez Wallet</h2>
+                <p class="section-sub">Load travel money in your own currency. Tourez converts the top-up to Nepalese Rupees (NPR) and keeps one simple travel balance.</p>
+            </div>
+            <div class="wallet-demo-pill">Demo wallet · No real card charged</div>
+        </div>
+
+        <div class="wallet-flow" aria-label="How Tourez Wallet works">
+            <div><span>1</span><strong>Choose currency</strong><small>USD, AUD, INR and more</small></div>
+            <i>→</i>
+            <div><span>2</span><strong>Auto-convert</strong><small>Exchange amount is calculated in NPR</small></div>
+            <i>→</i>
+            <div><span>3</span><strong>Travel balance</strong><small>Your demo balance is stored in NPR</small></div>
+        </div>
+
+        <div class="wallet-layout">
+            <div class="wallet-balance-card">
+                <div class="wallet-card-topline">
+                    <span class="wallet-brand">🇳🇵 TOUREZ</span>
+                    <span class="wallet-chip" aria-hidden="true"></span>
+                </div>
+                <div class="wallet-balance-label">Available travel balance</div>
+                <div class="wallet-balance" id="walletBalance">रू 0.00</div>
+                <div class="wallet-balance-note">Stored in NPR · Ready for your Nepal trip</div>
+                <div class="wallet-card-bottom">
+                    <span>TOUREZ TRAVEL WALLET</span>
+                    <span id="walletUpdated">Not funded yet</span>
+                </div>
+                <div class="wallet-mountain" aria-hidden="true"></div>
+            </div>
+
+            <div class="wallet-topup-card">
+                <div class="wallet-card-heading">
+                    <div>
+                        <span class="section-kicker">ADD FUNDS</span>
+                        <h3>Top up your wallet</h3>
+                    </div>
+                    <span class="wallet-secure"> Demo mode</span>
+                </div>
+
+                <div class="wallet-form-grid">
+                    <div class="form-field">
+                        <label for="walletAmount">Amount to load</label>
+                        <input type="number" id="walletAmount" min="0.01" step="0.01" value="100" inputmode="decimal" />
+                    </div>
+                    <div class="form-field">
+                        <label for="walletCurrency">Your currency</label>
+                        <input list="walletCurrencyList" id="walletCurrency" value="USD" maxlength="3" autocomplete="off" spellcheck="false" aria-label="Source currency code" />
+                        <datalist id="walletCurrencyList">
+                            <option value="USD">US Dollar</option>
+                            <option value="AUD">Australian Dollar</option>
+                            <option value="EUR">Euro</option>
+                            <option value="GBP">British Pound</option>
+                            <option value="INR">Indian Rupee</option>
+                            <option value="JPY">Japanese Yen</option>
+                            <option value="CAD">Canadian Dollar</option>
+                            <option value="NZD">New Zealand Dollar</option>
+                            <option value="SGD">Singapore Dollar</option>
+                            <option value="CNY">Chinese Yuan</option>
+                            <option value="HKD">Hong Kong Dollar</option>
+                            <option value="KRW">South Korean Won</option>
+                            <option value="AED">UAE Dirham</option>
+                            <option value="QAR">Qatari Riyal</option>
+                            <option value="SAR">Saudi Riyal</option>
+                            <option value="MYR">Malaysian Ringgit</option>
+                            <option value="THB">Thai Baht</option>
+                            <option value="BDT">Bangladeshi Taka</option>
+                            <option value="CHF">Swiss Franc</option>
+                            <option value="NPR">Nepalese Rupee</option>
+                        </datalist>
+                    </div>
+                </div>
+
+                <div class="wallet-quick-row" aria-label="Popular top-up currencies">
+                    <span>Quick select</span>
+                    <button type="button" class="wallet-currency-chip active" data-wallet-currency="USD">🇺🇸 USD</button>
+                    <button type="button" class="wallet-currency-chip" data-wallet-currency="AUD">🇦🇺 AUD</button>
+                    <button type="button" class="wallet-currency-chip" data-wallet-currency="INR">🇮🇳 INR</button>
+                    <button type="button" class="wallet-currency-chip" data-wallet-currency="EUR">🇪🇺 EUR</button>
+                    <button type="button" class="wallet-currency-chip" data-wallet-currency="GBP">🇬🇧 GBP</button>
+                </div>
+
+                <div class="wallet-conversion-box" id="walletConversionPreview" aria-live="polite">
+                    <div class="wallet-conversion-loading">Enter an amount to see the NPR conversion.</div>
+                </div>
+
+                <button class="btn btn-primary btn-lg btn-block wallet-topup-btn" id="walletTopupBtn">
+                    Add to Tourez Wallet
+                </button>
+                <p class="wallet-disclaimer">Hackathon demo: this simulates a successful top-up and stores the NPR balance in this browser. It does not collect card details or move real money.</p>
+            </div>
+        </div>
+
+        <div class="wallet-history-card">
+            <div class="wallet-history-head">
+                <div>
+                    <span class="section-kicker">ACTIVITY</span>
+                    <h3>Wallet history</h3>
+                </div>
+                <button class="wallet-reset-btn" id="walletResetBtn" type="button">Reset demo wallet</button>
+            </div>
+            <div id="walletHistory" class="wallet-history"></div>
+        </div>
+    </section>
+
+
+
+    <!-- CURRENCY CONVERTER -->
+    <section class="section currency-section" id="currency">
+        <div class="section-head">
+            <div>
+                <h2 class="section-title" data-i18n="currency_title">💱 Currency Converter</h2>
+                <p class="section-sub" data-i18n="currency_sub">Convert currencies using live exchange rates.</p>
+            </div>
+        </div>
+        <div class="currency-card" id="currencyCard">
+            <div class="currency-row">
+                <div class="cur-field">
+                    <label data-i18n="currency_amount">Amount</label>
+                    <input type="number" id="curAmount" value="300" min="0" step="any" />
+                </div>
+                <div class="cur-field">
+                    <label>From</label>
+                    <select id="curFrom">
+                        <option value="USD" selected>🇺🇸 USD</option>
+                        <option value="NPR">🇳🇵 NPR</option>
+                        <option value="INR">🇮🇳 INR</option>
+                        <option value="EUR">🇪🇺 EUR</option>
+                        <option value="GBP">🇬🇧 GBP</option>
+                        <option value="JPY">🇯🇵 JPY</option>
+                        <option value="AUD">🇦🇺 AUD</option>
+                        <option value="CAD">🇨🇦 CAD</option>
+                    </select>
+                </div>
+                <button class="swap-btn" id="swapBtn" aria-label="Swap currencies">⇅</button>
+                <div class="cur-field">
+                    <label>To</label>
+                    <select id="curTo">
+                        <option value="USD">🇺🇸 USD</option>
+                        <option value="NPR" selected>🇳🇵 NPR</option>
+                        <option value="INR">🇮🇳 INR</option>
+                        <option value="EUR">🇪🇺 EUR</option>
+                        <option value="GBP">🇬🇧 GBP</option>
+                        <option value="JPY">🇯🇵 JPY</option>
+                        <option value="AUD">🇦🇺 AUD</option>
+                        <option value="CAD">🇨🇦 CAD</option>
+                    </select>
+                </div>
+            </div>
+            <div class="currency-result" id="currencyResult">
+                <span class="cur-loading" id="curLoading">💱 Fetching live exchange rate...</span>
+            </div>
+        </div>
+    </section>
+
+
+
+<!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">🇳🇵 <strong>Tourez</strong></div>
+            <p class="footer-tagline" data-i18n="footer_tagline">Discover. Understand. Plan. Explore.</p>
+            <p class="footer-note" data-i18n="footer_note">
+                © <span id="year"></span> Tourez · Built with FastAPI, Leaflet, OpenStreetMap, and optional AI/weather integrations.
+            </p>
+        </div>
+    </footer>
+
+    <!-- Toast container -->
+    <div class="toast-container" id="toastContainer" aria-live="assertive"></div>
+
+    <!-- Scripts -->
+    <script src="js/i18n.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/services.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="js/map.js"></script>
+    <script src="js/ai.js"></script>
+    <script src="js/currency.js"></script>
+    <script src="js/wallet.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
+
