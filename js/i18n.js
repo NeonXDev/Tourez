@@ -49,7 +49,7 @@ assistant_title: "🤖 Tourez AI Assistant",
         about_adapt: "Adapt Plans",
         about_adapt_p: "Itineraries adjust when weather or conditions change.",
         footer_tagline: "Discover. Understand. Plan. Explore.",
-        footer_note: "© {year} Tourez · Frontend built for FastAPI + Groq + live APIs integration."
+        footer_note: "© {year} Tourez · Frontend built for FastAPI + OpenAI + live APIs integration."
     },
     ne: { // Nepali (partial illustrative dictionary)
         nav_explore: "अन्वेषण गर्नुहोस्",

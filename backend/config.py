@@ -37,8 +37,8 @@ class Settings:
             "http://127.0.0.1:3000",
         ]
 
-        self.groq_api_key = _clean_secret(os.getenv("GROQ_API_KEY", ""))
-        self.groq_model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile").strip()
+        self.openai_api_key = _clean_secret(os.getenv("OPENAI_API_KEY", ""))
+        self.openai_model = os.getenv("OPENAI_MODEL", "gpt-4o-mini").strip()
 
         # Leaflet renders OpenStreetMap tiles in the browser. These backend
         # endpoints provide free, keyless geocoding and nearby POI lookup.
@@ -74,8 +74,8 @@ class Settings:
         ).rstrip("/")
 
     @property
-    def has_groq(self) -> bool:
-        return bool(self.groq_api_key)
+    def has_openai(self) -> bool:
+        return bool(self.openai_api_key)
 
 
 settings = Settings()

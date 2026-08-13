@@ -44,7 +44,7 @@ Ask questions such as:
 - What can I do if it rains?
 - Plan a trip for me.
 
-The AI layer will be powered by **Groq API**.
+The AI layer will be powered by **OpenAI API**.
 
 ---
 
@@ -137,7 +137,7 @@ The core idea is to combine **real-world data with AI reasoning**.
                     │
        ┌────────────┼─────────────┐
        ▼            ▼             ▼
-   🤖 Groq      🗺️ Google      🌦️ Weather
+   🤖 OpenAI      🗺️ Google      🌦️ Weather
      AI          Places           API
        │
        ├──────────► 💱 Currency API

@@ -3,7 +3,7 @@
 Architecture:
     Browser → JS frontend → FastAPI (this app) → External APIs
                                     ↓
-                                Groq AI (reasoning layer)
+                                OpenAI (reasoning layer)
 
 Run:
     uvicorn main:app --reload
@@ -13,12 +13,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
 from routers import destination, weather, places, ai, currency, translate
-from services import groq_service
+from services import openai_service
 
 app = FastAPI(
     title="Tourez Backend API",
     description="AI-powered smart tourism backend. Combines real weather, places, "
-                "and currency data with Groq AI for personalized travel decisions.",
+                "and currency data with OpenAI for personalized travel decisions.",
     version="2.0.0",
 )
 
@@ -37,7 +37,7 @@ async def health():
     return {
         "status": "ok",
         "service": "Tourez Backend",
-        "groq": groq_service.is_available(),
+        "openai": openai_service.is_available(),
         "map_provider": "Leaflet + OpenStreetMap",
         "weather": "Open-Meteo",
         "use_mock": settings.use_mock,

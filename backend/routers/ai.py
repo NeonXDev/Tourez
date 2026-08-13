@@ -1,6 +1,6 @@
 """ai.py — AI endpoints: chat, plan trip, modify itinerary.
 
-Uses the Groq reasoning layer. If Groq is not configured, falls back to
+Uses the OpenAI reasoning layer. If OpenAI is not configured, falls back to
 demo responses so the app remains testable end-to-end.
 """
 from typing import Any, Dict
@@ -11,12 +11,12 @@ from schemas import (
     ChatRequest, ChatResponse, PlanRequest, ItineraryOut,
     ModifyRequest, ModifyResponse,
 )
-from services import groq_service
+from services import openai_service
 from config import settings
 
 router = APIRouter(prefix="/api/ai", tags=["ai"])
 
-# Map our frontend's camelCase weather fields to what Groq expects.
+# Map our frontend's camelCase weather fields to what OpenAI expects.
 def _normalize_weather(weather: Dict[str, Any]) -> Dict[str, Any]:
     if not weather:
         return {}
@@ -34,25 +34,25 @@ def _normalize_weather(weather: Dict[str, Any]) -> Dict[str, Any]:
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest):
-    """AI chat endpoint. Sends message + context to Groq."""
+    """AI chat endpoint. Sends message + context to OpenAI."""
     context = req.context.model_dump() if req.context else None
     if context and context.get("weather"):
         context["weather"] = _normalize_weather(context["weather"])
     try:
-        if groq_service.is_available():
-            reply = groq_service.chat(req.message, context, req.history)
+        if openai_service.is_available():
+            reply = openai_service.chat(req.message, context, req.history)
         else:
-            reply = groq_service.default_chat_reply(req.message, context)
+            reply = openai_service.default_chat_reply(req.message, context)
         return ChatResponse(message=reply)
     except Exception:
         # Graceful fallback — never crash the whole app.
-        reply = groq_service.default_chat_reply(req.message, context)
+        reply = openai_service.default_chat_reply(req.message, context)
         return ChatResponse(message=reply)
 
 
 @router.post("/plan", response_model=ItineraryOut)
 async def plan_trip(req: PlanRequest):
-    """Plan a personalized itinerary using Groq + real context."""
+    """Plan a personalized itinerary using OpenAI + real context."""
     prefs = {
         "destination": req.destination,
         "duration": req.duration,
@@ -64,8 +64,8 @@ async def plan_trip(req: PlanRequest):
         "lon": req.lon,
     }
     try:
-        if groq_service.is_available():
-            return groq_service.plan_trip(prefs)
+        if openai_service.is_available():
+            return openai_service.plan_trip(prefs)
         # Demo fallback itinerary.
         return _demo_itinerary(prefs)
     except Exception as e:
@@ -79,8 +79,8 @@ async def modify_itinerary(req: ModifyRequest):
     """Modify an itinerary based on changing conditions (e.g. weather)."""
     weather_norm = _normalize_weather(req.weather or {})
     try:
-        if groq_service.is_available():
-            updated = groq_service.modify_itinerary(
+        if openai_service.is_available():
+            updated = openai_service.modify_itinerary(
                 req.itinerary, weather_norm, req.instruction
             )
             return ModifyResponse(itinerary=updated, modified=updated.get("modified"))
@@ -95,7 +95,7 @@ async def modify_itinerary(req: ModifyRequest):
 
 
 # ----------------------------------------------------------------
-# Demo fallbacks (used only when Groq is unavailable)
+# Demo fallbacks (used only when OpenAI is unavailable)
 # ----------------------------------------------------------------
 def _demo_itinerary(prefs: Dict[str, Any]) -> Dict[str, Any]:
     themes = prefs.get("interests") or ["Nature", "Culture", "Food"]
@@ -137,7 +137,7 @@ def _demo_itinerary(prefs: Dict[str, Any]) -> Dict[str, Any]:
         "days": days,
         "total_cost": round(total, 2),
         "remaining": round(max(0, budget - total), 2),
-        "note": "Demo itinerary (Groq unavailable). Connect GROQ_API_KEY for AI-generated plans.",
+        "note": "Demo itinerary (OpenAI unavailable). Connect OPENAI_API_KEY for AI-generated plans.",
     }
 
 

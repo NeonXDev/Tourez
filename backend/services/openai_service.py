@@ -1,7 +1,7 @@
-"""groq_service.py — Groq AI reasoning layer.
+"""openai_service.py — OpenAI reasoning layer.
 
 This is the intelligence core of Tourez. It creates personalized,
-weather-aware, budget-aware travel responses using Groq's LLM.
+weather-aware, budget-aware travel responses using OpenAI's LLM.
 
 The AI is given REAL data (weather, places, currency) as context and
 asked to reason over it — it does NOT invent live data.
@@ -32,7 +32,7 @@ Rules:
 """
 
 def _build_context_block(context: Optional[Dict[str, Any]]) -> str:
-    """Convert the chat context into a readable prompt block for Groq."""
+    """Convert the chat context into a readable prompt block for OpenAI."""
     if not context:
         return "No additional context provided."
 
@@ -64,12 +64,12 @@ def _build_context_block(context: Optional[Dict[str, Any]]) -> str:
 
 
 def _get_client():
-    from groq import Groq
-    return Groq(api_key=settings.groq_api_key)
+    from openai import OpenAI
+    return OpenAI(api_key=settings.openai_api_key)
 
 
 def is_available() -> bool:
-    return settings.has_groq and importlib.util.find_spec("groq") is not None
+    return settings.has_openai and importlib.util.find_spec("openai") is not None
 
 
 def chat(
@@ -77,7 +77,7 @@ def chat(
     context: Optional[Dict[str, Any]] = None,
     history: Optional[List[Dict[str, str]]] = None,
 ) -> str:
-    """Send a context-aware chat message to Groq and return the assistant reply."""
+    """Send a context-aware chat message to OpenAI and return the assistant reply."""
     client = _get_client()
     context_block = _build_context_block(context)
     user_prompt = f"Context for the currently selected destination:\n{context_block}\n\nCurrent user question: {message}"
@@ -91,7 +91,7 @@ def chat(
     messages.append({"role": "user", "content": user_prompt})
 
     response = client.chat.completions.create(
-        model=settings.groq_model,
+        model=settings.openai_model,
         temperature=0.35,
         max_tokens=900,
         messages=messages,
@@ -99,8 +99,45 @@ def chat(
     return response.choices[0].message.content.strip()
 
 
+def _coerce_activity(raw: Any, index: int) -> Dict[str, Any]:
+    """Backfill/repair one OpenAI-generated activity so it always matches the
+    ItineraryActivity schema (time/place/detail/cost/transport all required).
+    LLM JSON output occasionally omits a field or sends the wrong type —
+    without this, a single missing key turns into a hard 500 for the user."""
+    a = raw if isinstance(raw, dict) else {}
+    try:
+        cost = float(a.get("cost") if a.get("cost") is not None else 0)
+    except (TypeError, ValueError):
+        cost = 0.0
+    default_time = ["09:00", "12:30", "16:00"][index % 3]
+    return {
+        "time": str(a.get("time") or default_time),
+        "place": str(a.get("place") or "Local activity"),
+        "detail": str(a.get("detail") or "Details to be confirmed locally."),
+        "cost": cost,
+        "transport": str(a.get("transport") or "Local transport"),
+    }
+
+
+def _coerce_day(raw: Any, index: int) -> Dict[str, Any]:
+    """Backfill/repair one OpenAI-generated day so day/theme/activities are
+    always well-formed, even if the model's JSON is slightly off-shape."""
+    d = raw if isinstance(raw, dict) else {}
+    try:
+        day_num = int(d.get("day")) if d.get("day") is not None else index + 1
+    except (TypeError, ValueError):
+        day_num = index + 1
+    raw_activities = d.get("activities")
+    raw_activities = raw_activities if isinstance(raw_activities, list) else []
+    return {
+        "day": day_num,
+        "theme": str(d.get("theme") or "General"),
+        "activities": [_coerce_activity(a, i) for i, a in enumerate(raw_activities)],
+    }
+
+
 def plan_trip(prefs: Dict[str, Any]) -> Dict[str, Any]:
-    """Use Groq to build a structured personalized itinerary."""
+    """Use OpenAI to build a structured personalized itinerary."""
     client = _get_client()
     prompt = f"""
 Plan a personalized trip with the following preferences:
@@ -129,7 +166,7 @@ Base activities on the destination and interests. Keep costs realistic and
 within budget. Do not add content outside the JSON.
 """
     response = client.chat.completions.create(
-        model=settings.groq_model,
+        model=settings.openai_model,
         temperature=0.7,
         max_tokens=1200,
         messages=[
@@ -141,18 +178,15 @@ within budget. Do not add content outside the JSON.
     content = response.choices[0].message.content
     data = json.loads(content)
 
-    days = []
-    for d in data.get("days", []):
-        days.append(
-            {
-                "day": int(d.get("day", len(days) + 1)),
-                "theme": d.get("theme", "General"),
-                "activities": d.get("activities", []),
-            }
-        )
+    raw_days = data.get("days")
+    raw_days = raw_days if isinstance(raw_days, list) else []
+    days = [_coerce_day(d, i) for i, d in enumerate(raw_days)]
 
-    total_cost = float(data.get("total_cost", 0))
-    budget = float(prefs.get("budget", 0))
+    try:
+        total_cost = float(data.get("total_cost", 0) or 0)
+    except (TypeError, ValueError):
+        total_cost = sum(a["cost"] for d in days for a in d["activities"])
+    budget = float(prefs.get("budget", 0) or 0)
     return {
         "destination": prefs.get("destination"),
         "duration": int(prefs.get("duration", 1)),
@@ -163,7 +197,7 @@ within budget. Do not add content outside the JSON.
         "days": days,
         "total_cost": round(total_cost, 2),
         "remaining": round(max(0, budget - total_cost), 2),
-        "note": data.get("note", ""),
+        "note": str(data.get("note") or ""),
     }
 
 
@@ -172,7 +206,7 @@ def modify_itinerary(
     weather: Optional[Dict[str, Any]],
     instruction: str,
 ) -> Dict[str, Any]:
-    """Ask Groq to adapt an existing itinerary based on changed conditions."""
+    """Ask OpenAI to adapt an existing itinerary based on changed conditions."""
     client = _get_client()
     weather_desc = "unknown"
     if weather:
@@ -190,12 +224,26 @@ Current weather: {weather_desc}
 User request: "{instruction}"
 
 Adapt the itinerary to the current weather and the user's request.
-Return STRICT JSON only with the SAME shape as the input itinerary
-(days with day, theme, activities[{time, place, detail, cost, transport}],
-plus total_cost, remaining, note). Keep the same budget/currency.
+Return STRICT JSON only, with this exact shape:
+{{
+  "days": [
+    {{
+      "day": 1,
+      "theme": "short theme",
+      "activities": [
+        {{"time": "09:00", "place": "Place name", "detail": "short description", "cost": <number in currency>, "transport": "walk/local ride"}}
+      ]
+    }}
+  ],
+  "total_cost": <number>,
+  "remaining": <budget minus total_cost>,
+  "note": "short helpful note"
+}}
+Keep the SAME number of days, and the same budget/currency, as the input
+itinerary. Do not add content outside the JSON.
 """
     response = client.chat.completions.create(
-        model=settings.groq_model,
+        model=settings.openai_model,
         temperature=0.7,
         max_tokens=1200,
         messages=[
@@ -206,6 +254,21 @@ plus total_cost, remaining, note). Keep the same budget/currency.
     )
     content = response.choices[0].message.content
     updated = json.loads(content)
+
+    raw_days = updated.get("days")
+    raw_days = raw_days if isinstance(raw_days, list) else []
+    updated["days"] = [_coerce_day(d, i) for i, d in enumerate(raw_days)]
+
+    try:
+        total_cost = float(updated.get("total_cost", 0) or 0)
+    except (TypeError, ValueError):
+        total_cost = sum(a["cost"] for d in updated["days"] for a in d["activities"])
+    try:
+        budget = float(itinerary.get("budget", 0) or 0)
+    except (TypeError, ValueError):
+        budget = 0.0
+    updated["total_cost"] = round(total_cost, 2)
+    updated["remaining"] = round(max(0, budget - total_cost), 2)
 
     # Preserve wrapping fields from the original itinerary.
     updated["destination"] = itinerary.get("destination")
@@ -219,7 +282,7 @@ plus total_cost, remaining, note). Keep the same budget/currency.
 
 
 def default_chat_reply(message: str, context: Optional[Dict[str, Any]] = None) -> str:
-    """Useful local assistant when Groq is unavailable.
+    """Useful local assistant when OpenAI is unavailable.
 
     This is intentionally context-aware rather than a generic canned reply: it uses
     the destination, current weather and OpenStreetMap places already loaded by Tourez.
@@ -389,4 +452,3 @@ def default_chat_reply(message: str, context: Optional[Dict[str, Any]] = None) -
         "“What should I visit?”, “Find a nearby hotel”, “Is the weather good for trekking?”, "
         "or “What should I avoid here?”"
     )
-
