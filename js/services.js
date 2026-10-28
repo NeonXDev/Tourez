@@ -1,6 +1,10 @@
 const USE_MOCK = false;
 
-const API_BASE = window.TOUREZ_API_BASE || "http://localhost:8000";
+const API_BASE = window.TOUREZ_API_BASE || (
+    window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+        ? "http://localhost:8000"
+        : ""
+);
 
 /** Small helper to make a JSON fetch with a timeout. */
 async function apiFetch(path, options = {}) {

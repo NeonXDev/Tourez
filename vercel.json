@@ -1,6 +1,11 @@
 {
   "version": 2,
-  "outputDirectory": ".",
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.py"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
