@@ -8,3 +8,4 @@ if backend_path not in sys.path:
     sys.path.insert(0, backend_path)
 
 from main import app  # ASGI app exposed for Vercel Python runtime
+
