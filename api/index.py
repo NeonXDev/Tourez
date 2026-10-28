@@ -7,28 +7,33 @@ if backend_path not in sys.path:
     sys.path.insert(0, backend_path)
 
 from main import app as base_app
-from main import health
+from config import settings
+from services import openai_service
 from starlette.requests import Request
-from starlette.responses import JSONResponse
 
+@base_app.get("/api/health")
 @base_app.get("/health")
-async def health_alias():
-    return await health()
-
 @base_app.get("/api/index.py")
-async def index_py_health():
-    return await health()
-
-@base_app.api_route("/api/debug-path", methods=["GET", "POST"])
-@base_app.api_route("/debug-path", methods=["GET", "POST"])
-async def debug_path(request: Request):
-    return JSONResponse({
-        "url_path": request.url.path,
+async def health_debug(request: Request):
+    x_headers = {
+        k.decode("utf-8", "ignore"): v.decode("utf-8", "ignore")
+        for k, v in request.scope.get("headers", [])
+        if b"x-" in k.lower() or b"url" in k.lower() or b"path" in k.lower()
+    }
+    return {
+        "status": "ok",
+        "service": "Tourez Backend",
+        "ai_provider": settings.ai_provider,
+        "gemini": settings.has_gemini,
+        "openai": settings.has_openai,
+        "ai_available": openai_service.is_available(),
+        "map_provider": "Leaflet + OpenStreetMap",
+        "weather": "Open-Meteo",
+        "use_mock": settings.use_mock,
+        "original_path": request.scope.get("original_path"),
         "scope_path": request.scope.get("path"),
-        "raw_path": request.scope.get("raw_path", b"").decode("utf-8", "ignore"),
-        "forwarded_uri": request.headers.get("x-forwarded-uri"),
-        "matched_path": request.headers.get("x-matched-path"),
-    })
+        "headers": x_headers,
+    }
 
 class VercelPathMiddleware:
     def __init__(self, asgi_app):
@@ -36,25 +41,20 @@ class VercelPathMiddleware:
 
     async def __call__(self, scope, receive, send):
         if scope["type"] == "http":
-            path = scope.get("path", "")
+            scope["original_path"] = scope.get("path")
             headers = dict(scope.get("headers", []))
-            
-            # 1. Check if Vercel provided the real incoming URI
-            forwarded = headers.get(b"x-forwarded-uri", b"").decode("utf-8", "ignore")
-            if forwarded:
-                clean_path = forwarded.split("?")[0]
-                if clean_path:
-                    scope["path"] = clean_path
 
-            # 2. If path is still /api/index.py or starts with it, normalize
-            cur = scope.get("path", "")
-            if cur.startswith("/api/index.py"):
-                sub = cur[len("/api/index.py"):]
-                scope["path"] = "/api" + (sub if sub.startswith("/") else "/" + sub) if sub else "/api/health"
-            elif not cur.startswith("/api"):
-                if cur.startswith("/index.py"):
-                    cur = cur[len("/index.py"):]
-                scope["path"] = "/api" + (cur if cur.startswith("/") else "/" + cur)
+            # Check all possible headers Vercel might use for the rewritten path
+            uri = (
+                headers.get(b"x-matched-path")
+                or headers.get(b"x-forwarded-uri")
+                or headers.get(b"x-now-route-matches")
+                or headers.get(b"x-vercel-matched-path")
+            )
+            if uri:
+                clean = uri.decode("utf-8", "ignore").split("?")[0]
+                if clean:
+                    scope["path"] = clean
 
         await self.asgi_app(scope, receive, send)
 
