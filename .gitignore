@@ -1,0 +1,23 @@
+# Environments & Secrets
+.env
+*.env
+backend/.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.Python
+
+# Logs
+*.log
+backend/server_*.log
+
+# System & IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

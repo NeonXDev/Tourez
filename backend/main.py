@@ -3,7 +3,7 @@
 Architecture:
     Browser → JS frontend → FastAPI (this app) → External APIs
                                     ↓
-                                OpenAI (reasoning layer)
+                                Gemini / OpenAI (reasoning layer)
 
 Run:
     uvicorn main:app --reload
@@ -12,14 +12,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
-from routers import destination, weather, places, ai, currency, translate
+from routers import destination, weather, places, ai, currency, translate, compliance
 from services import openai_service
 
 app = FastAPI(
     title="Tourez Backend API",
     description="AI-powered smart tourism backend. Combines real weather, places, "
-                "and currency data with OpenAI for personalized travel decisions.",
-    version="2.0.0",
+                "and currency data with Google Gemini / OpenAI for personalized travel decisions.",
+    version="2.1.0",
 )
 
 # CORS — allow the static frontend (Vercel / local) to call this API.
@@ -37,7 +37,10 @@ async def health():
     return {
         "status": "ok",
         "service": "Tourez Backend",
-        "openai": openai_service.is_available(),
+        "ai_provider": settings.ai_provider,
+        "gemini": settings.has_gemini,
+        "openai": settings.has_openai,
+        "ai_available": openai_service.is_available(),
         "map_provider": "Leaflet + OpenStreetMap",
         "weather": "Open-Meteo",
         "use_mock": settings.use_mock,
@@ -50,6 +53,7 @@ app.include_router(places.router)
 app.include_router(ai.router)
 app.include_router(currency.router)
 app.include_router(translate.router)
+app.include_router(compliance.router)
 
 # Root
 @app.get("/")

@@ -57,7 +57,7 @@ const MapKit = (function () {
                     <div>🕐 ${escapeHtml(openText)}</div>
                 </div>
                 <div class="place-popup-actions">
-                    <a class="btn btn-outline btn-sm" href="${escapeHtml(osmUrl)}" target="_blank" rel="noopener">Open in OSM</a>
+                    <a class="btn btn-outline btn-sm" href="${escapeHtml(osmUrl)}" target="_blank" rel="noopener">Open in OpenStreetMap ↗</a>
                     <a class="btn btn-primary btn-sm" href="${escapeHtml(directionsUrl)}" target="_blank" rel="noopener">Directions</a>
                 </div>
             </div>`;
@@ -166,7 +166,7 @@ const MapKit = (function () {
             maxZoom: 19,
         });
 
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
             maxZoom: 19,
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
         }).addTo(map);

@@ -1,6 +1,6 @@
 const I18N_DICT = {
     en: {
-        nav_explore: "Explore",
+        nav_explore: "🗺️ Open Map",
         nav_assistant: "AI Travel Assistant",
         nav_planner: "Trip Planner",
 nav_currency: "Currency",
@@ -9,7 +9,7 @@ nav_currency: "Currency",
         hero_subtitle: "Your AI-powered travel companion for discovering destinations, understanding local culture, checking real-time conditions, finding essential services, and planning personalized trips.",
         search_placeholder: "Where do you want to explore?",
         use_location: "Use My Location",
-        hero_explore_btn: "Explore Destination",
+        hero_explore_btn: "🗺️ Open Map",
         hero_ask_btn: "🤖 Ask AI",
         stat_dest: "Destinations",
         stat_lang: "Languages",

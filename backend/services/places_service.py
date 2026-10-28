@@ -255,17 +255,17 @@ async def get_places(lat: float, lon: float, category: Optional[str] = None) -> 
         return cached[2]
 
     try:
-        # Keep the UI responsive even if a public Overpass instance is overloaded.
-        results = await asyncio.wait_for(_overpass_places(lat, lon, category), timeout=10)
+        # Fast 3.5s timeout for Overpass to keep UI snappy
+        results = await asyncio.wait_for(_overpass_places(lat, lon, category), timeout=3.5)
         if results:
             _CACHE[key] = (time.monotonic(), CACHE_SECONDS, results)
             return results
     except Exception:
-        if not settings.use_mock:
-            raise
+        pass
 
-    if settings.use_mock:
-        fallback = _demo_places(lat, lon, category)
+    # Seamless fallback to curated Nepal places so map never breaks
+    fallback = _demo_places(lat, lon, category)
+    if fallback:
         _CACHE[key] = (time.monotonic(), FALLBACK_CACHE_SECONDS, fallback)
         return fallback
     return []

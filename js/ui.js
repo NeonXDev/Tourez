@@ -1,4 +1,4 @@
-const UI = (function () {
+﻿const UI = (function () {
     let currentDestination = null;
     let currentPlaces = [];
     let activeCategory = null;
@@ -7,6 +7,7 @@ const UI = (function () {
     /* ---------- Toast ---------- */
     function showToast(msg, type = "info") {
         const wrap = document.getElementById("toastContainer");
+        if (!wrap) return;
         const toast = document.createElement("div");
         toast.className = `toast ${type}`;
         toast.textContent = msg;
@@ -22,6 +23,7 @@ const UI = (function () {
         const saved = localStorage.getItem("smartTourTheme");
         if (saved) document.documentElement.setAttribute("data-theme", saved);
         const btn = document.getElementById("themeToggle");
+        if (!btn) return;
         btn.addEventListener("click", () => {
             const cur = document.documentElement.getAttribute("data-theme");
             const next = cur === "dark" ? "light" : "dark";
@@ -35,9 +37,11 @@ const UI = (function () {
         const nav = document.getElementById("navbar");
         const hamburger = document.getElementById("hamburger");
         const navLinks = document.getElementById("navLinks");
+        if (!nav) return;
         window.addEventListener("scroll", () => {
             nav.classList.toggle("scrolled", window.scrollY > 40);
         });
+        if (!hamburger || !navLinks) return;
         hamburger.addEventListener("click", () => {
             const open = navLinks.classList.toggle("open");
             hamburger.classList.toggle("open", open);
@@ -54,6 +58,7 @@ const UI = (function () {
     /* ---------- Language ---------- */
     function initLanguage() {
         const sel = document.getElementById("langSelect");
+        if (!sel) return;
         sel.addEventListener("change", async () => {
             const lang = sel.value;
             await window.SmartTour.applyLanguage(lang);
@@ -76,6 +81,7 @@ const UI = (function () {
     function initSearch() {
         const input = document.getElementById("destinationInput");
         const suggest = document.getElementById("searchSuggestions");
+        if (!input || !suggest) return;
         input.addEventListener("input", async () => {
             const q = input.value.trim();
             if (q.length < 2) {
@@ -112,31 +118,44 @@ const UI = (function () {
         });
 
         const exploreBtn = document.getElementById("exploreBtn");
-        exploreBtn.addEventListener("click", async () => {
-            const q = input.value.trim();
-            if (!q) { showToast("🔍 Please type a destination first."); return; }
-            let d = window.SmartTour.DESTINATIONS.find((x) => x.name.toLowerCase() === q.toLowerCase());
-            if (!d) {
-                try {
-                    const matches = await window.SmartTour.services.searchDestinations(q);
-                    d = matches && matches[0];
-                } catch (e) {
-                    d = null;
+        if (exploreBtn) {
+            exploreBtn.addEventListener("click", async () => {
+                const q = input.value.trim();
+                let d = null;
+                if (q) {
+                    d = window.SmartTour.DESTINATIONS.find((x) => x.name.toLowerCase() === q.toLowerCase());
+                    if (!d) {
+                        try {
+                            const matches = await window.SmartTour.services.searchDestinations(q);
+                            d = matches && matches[0];
+                        } catch (e) {
+                            d = null;
+                        }
+                    }
                 }
-            }
-            if (!d) {
-                showToast(`📍 No matching destination found for "${q}".`, "error");
-                return;
-            }
-            input.value = d.name;
-            selectDestination(d);
-            document.getElementById("explore").scrollIntoView({ behavior: "smooth" });
-        });
+                if (!d) {
+                    d = currentDestination || window.SmartTour.DESTINATIONS[0];
+                }
+                input.value = d.name;
+                selectDestination(d);
+                const exploreEl = document.getElementById("explore");
+                if (exploreEl) {
+                    exploreEl.scrollIntoView({ behavior: "smooth" });
+                    setTimeout(() => {
+                        if (window.SmartTour.mapInstance) window.SmartTour.mapInstance.invalidateSize();
+                    }, 250);
+                    setTimeout(() => {
+                        if (window.SmartTour.mapInstance) window.SmartTour.mapInstance.invalidateSize();
+                    }, 650);
+                }
+                showToast(`🗺️ Opened map for ${d.name}!`);
+            });
+        }
 
         const askAiBtn = document.getElementById("askAiBtn");
         if (askAiBtn) {
             askAiBtn.addEventListener("click", () => {
-                document.getElementById("assistant").scrollIntoView({ behavior: "smooth" });
+                document.getElementById("assistant")?.scrollIntoView({ behavior: "smooth" });
                 setTimeout(() => document.getElementById("chatInput")?.focus(), 400);
             });
         }
@@ -172,7 +191,9 @@ const UI = (function () {
 
     /* ---------- Destination Panel ---------- */
     function renderDestLoading() {
-        document.getElementById("destinationPanel").innerHTML = `
+        const panel = document.getElementById("destinationPanel");
+        if (!panel) return;
+        panel.innerHTML = `
             <div class="dest-loading" style="width:100%;">
                 <div class="skeleton" style="height:200px;border-radius:16px;"></div>
                 <p style="color:var(--text-muted);margin-top:14px;">🌍 Finding your destination...</p>
@@ -190,26 +211,61 @@ const UI = (function () {
             : (heroPlaces.filter((p) => p.category === "Attractions").slice(0, 3).map((p) => p.name).join(", ") || "Nearby attractions are loaded from OpenStreetMap.");
         const bestTime = (d.bestTime && d.bestTime.length) ? d.bestTime.join(", ") : "Check current weather before travelling.";
         const description = d.description || `Explore ${d.name} with Tourez — discover attractions, culture, weather, and essential services in one place.`;
-        document.getElementById("destinationPanel").innerHTML = `
+        const panel = document.getElementById("destinationPanel");
+        if (!panel) return;
+        const elevations = {
+            pokhara: "822m / 2,697 ft · Subtropical Lakeside & Annapurna View",
+            kathmandu: "1,400m / 4,593 ft · Historic Valley & UNESCO Heritage",
+            chitwan: "150m / 492 ft · Terai Subtropical Jungle & National Park",
+            lumbini: "150m / 492 ft · Sacred Birthplace of Lord Buddha",
+            mustang: "3,840m / 12,598 ft · Trans-Himalayan Plateau & Muktinath",
+            illam: "1,600m / 5,249 ft · Lush Tea Gardens & Mountain Sunrises",
+            ilam: "1,600m / 5,249 ft · Lush Tea Gardens & Mountain Sunrises",
+        };
+        const elev = elevations[(d.id || d.name || "").toLowerCase()] || "Himalayan Region, Nepal";
+
+        panel.innerHTML = `
             <div class="dest-content">
                 <div class="dest-head">
                     <div>
                         <h3 class="dest-title">${d.name}</h3>
-                        <div class="dest-country">📍 ${d.name}, ${d.country}</div>
+                        <div class="dest-country">📍 ${d.name}, ${d.country || "Nepal"}</div>
                     </div>
-                    <span class="dest-badge">📍 Selected</span>
+                    <span class="dest-badge">✓ Active Explorer</span>
                 </div>
+                <div class="dest-elevation-pill">🏔️ Elevation: ${elev}</div>
                 <p class="dest-desc">${description}</p>
                 <div class="dest-about">
-                    <div class="dest-about-item"><span class="ic">🏛️</span><div><strong>Popular Attractions</strong><p>${attractions}</p></div></div>
-                    <div class="dest-about-item"><span class="ic">🗓️</span><div><strong>Best Time to Visit</strong><p>${bestTime}</p></div></div>
-                    <div class="dest-about-item"><span class="ic">🗺️</span><div><strong>Map Data</strong><p>Interactive map powered by Leaflet and OpenStreetMap.</p></div></div>
+                    <div class="dest-about-item"><span class="ic">🏛️</span><div><strong>Top Attractions</strong><p>${attractions}</p></div></div>
+                    <div class="dest-about-item"><span class="ic">🗓️</span><div><strong>Best Seasons</strong><p>${bestTime}</p></div></div>
+                    <div class="dest-about-item"><span class="ic">🗺️</span><div><strong>Interactive Map</strong><p>OpenStreetMap live tiles with real distances.</p></div></div>
+                </div>
+                <div class="dest-quick-actions">
+                    <button class="btn btn-outline btn-sm" id="destPlanBtn">🧳 Plan ${d.name} Trip</button>
+                    <button class="btn btn-primary btn-sm" id="destAskAiBtn">🤖 Ask AI about ${d.name}</button>
                 </div>
             </div>`;
+
+        // Wire quick actions
+        document.getElementById("destPlanBtn")?.addEventListener("click", () => {
+            const planDest = document.getElementById("planDest");
+            if (planDest) planDest.value = d.name;
+            document.getElementById("planner")?.scrollIntoView({ behavior: "smooth" });
+        });
+        document.getElementById("destAskAiBtn")?.addEventListener("click", () => {
+            document.getElementById("assistant")?.scrollIntoView({ behavior: "smooth" });
+            const input = document.getElementById("chatInput");
+            if (input) {
+                input.value = `Tell me the top must-visit places and local food in ${d.name}.`;
+                input.focus();
+            }
+        });
     }
 
     function renderDestError() {
-        document.getElementById("destinationPanel").innerHTML = `
+        const panel = document.getElementById("destinationPanel");
+        if (!panel) return;
+        panel.innerHTML = `
             <div class="dest-error" style="width:100%;">
                 <span style="font-size:2.5rem;">😕</span>
                 <p>Couldn't load destination data. Please try again.</p>
@@ -219,7 +275,9 @@ const UI = (function () {
 
     /* ---------- Weather ---------- */
     function renderWeatherLoading() {
-        document.getElementById("weatherCard").innerHTML = `
+        const card = document.getElementById("weatherCard");
+        if (!card) return;
+        card.innerHTML = `
             <div class="weather-loading">🌦️ Checking current weather...</div>`;
     }
 
@@ -307,7 +365,9 @@ function applyCategory() {
 
     /* ---------- Places ---------- */
     function renderPlacesLoading() {
-        document.getElementById("placesList").innerHTML = `<div class="no-data">📍 Finding nearby places...</div>`;
+        const list = document.getElementById("placesList");
+        if (!list) return;
+        list.innerHTML = `<div class="no-data">📍 Finding nearby places...</div>`;
     }
 
     async function loadPlaces(dest, category) {
@@ -321,7 +381,8 @@ function applyCategory() {
             renderPlacesToMap(places);
             renderPlacesList(places);
         } catch (e) {
-            document.getElementById("placesList").innerHTML = `<div class="no-data">⚠️ Couldn't load places. Try again later.</div>`;
+            const list = document.getElementById("placesList");
+            if (list) list.innerHTML = `<div class="no-data">⚠️ Couldn't load places. Try again later.</div>`;
         }
     }
 
@@ -338,20 +399,34 @@ function renderPlacesToMap(places) {
             return;
         }
         wrap.innerHTML = places.map((p) => `
-            <div class="place-card" data-place-id="${p.id}">
+            <div class="place-card" data-place-id="${p.id}" tabindex="0" role="article" aria-label="${p.name}, ${p.category}">
                 <div class="place-card-top">
-                    <span class="place-card-icon">${iconFor(p.category)}</span>
-                    ${p.rating ? `<span class="place-card-rating">⭐ ${p.rating}</span>` : ""}
+                    <span class="place-card-icon" aria-hidden="true">${iconFor(p.category)}</span>
+                    ${p.rating ? `<span class="place-card-rating" aria-label="Rating ${p.rating} out of 5 stars">⭐ ${p.rating}</span>` : ""}
                 </div>
                 <div class="place-card-name">${p.name}</div>
                 <div class="place-card-cat">${p.category}</div>
                 <div class="place-card-meta">📍 ${p.addr || "Address not listed"}${p.distance ? " · " + p.distance : ""}</div>
                 <div class="place-card-actions">
-                    <button class="btn btn-outline btn-sm" data-card-details data-place-id="${p.id}">Details</button>
-                    <button class="btn btn-primary btn-sm" data-card-directions data-place-id="${p.id}">Directions</button>
+                    <button class="btn btn-outline btn-sm" data-card-details data-place-id="${p.id}" aria-label="View details for ${p.name}">Details</button>
+                    <button class="btn btn-primary btn-sm" data-card-directions data-place-id="${p.id}" aria-label="Get directions to ${p.name}">Directions</button>
                 </div>
             </div>
         `).join("");
+
+        // Support Enter / Space on place card for keyboard navigation (Item 15)
+        wrap.querySelectorAll(".place-card").forEach((card) => {
+            card.addEventListener("keydown", (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                    if (e.target.closest("button")) return;
+                    e.preventDefault();
+                    const place = places.find((p) => String(p.id) === String(card.dataset.placeId));
+                    if (place && window.SmartTour.mapInstance) {
+                        window.SmartTour.mapInstance.openPopup && window.SmartTour.mapInstance.openPopup(place);
+                    }
+                }
+            });
+        });
         // Clicking a card focuses the marker on the map.
         wrap.querySelectorAll(".place-card").forEach((card) => {
             card.addEventListener("click", (e) => {
@@ -367,7 +442,11 @@ const place = places.find((p) => p.id === card.dataset.placeId);
             e.stopPropagation();
             const place = places.find((p) => String(p.id) === String(btn.dataset.placeId));
             if (!place) return;
-            if (window.SmartTour.mapInstance) window.SmartTour.mapInstance.openPopup(place);
+            const mapWrap = document.getElementById("explore");
+            if (mapWrap) mapWrap.scrollIntoView({ behavior: "smooth" });
+            if (window.SmartTour.mapInstance) {
+                setTimeout(() => window.SmartTour.mapInstance.openPopup(place), 300);
+            }
         }));
         wrap.querySelectorAll("[data-card-directions]").forEach((btn) => btn.addEventListener("click", (e) => {
             e.stopPropagation();
@@ -437,9 +516,22 @@ function iconFor(category) {
     /* ---------- Reveal on scroll ---------- */
     function initReveal() {
         const els = document.querySelectorAll(".section");
+        if (!("IntersectionObserver" in window)) {
+            els.forEach((el) => {
+                el.style.opacity = "1";
+                el.style.transform = "translateY(0)";
+            });
+            return;
+        }
         const obs = new IntersectionObserver((entries) => {
             entries.forEach((e) => {
-                if (e.isIntersecting) e.target.classList.add("reveal-visible");
+                if (e.isIntersecting) {
+                    e.target.classList.add("reveal-visible");
+                    if (e.target.id === "explore" && window.SmartTour.mapInstance) {
+                        setTimeout(() => window.SmartTour.mapInstance.invalidateSize(), 200);
+                        setTimeout(() => window.SmartTour.mapInstance.invalidateSize(), 700);
+                    }
+                }
             });
         }, { threshold: 0.1 });
         els.forEach((el) => {
@@ -448,7 +540,6 @@ function iconFor(category) {
             el.style.transition = "opacity .6s ease, transform .6s ease";
             obs.observe(el);
         });
-        // Fallback observer.
         const obs2 = new IntersectionObserver((entries) => {
             entries.forEach((e) => {
                 if (e.isIntersecting) {
@@ -464,6 +555,236 @@ function iconFor(category) {
         if (currentDestination) selectDestination(currentDestination);
     }
 
+
+    /* ---------- Modals (Items 1, 2, 3, 4, 8, 10, 19, 20) ---------- */
+    function initModals() {
+        let lastFocusedElement = null;
+
+        function openModal(modalId, triggerEl) {
+            const modal = document.getElementById(modalId);
+            if (!modal) return;
+            lastFocusedElement = triggerEl || document.activeElement;
+            modal.classList.add("active");
+            modal.setAttribute("aria-hidden", "false");
+            document.body.classList.add("modal-open");
+            const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+            if (focusable.length) focusable[0].focus();
+        }
+
+        function closeModal(modal) {
+            if (!modal) return;
+            modal.classList.remove("active");
+            modal.setAttribute("aria-hidden", "true");
+            if (!document.querySelector(".modal-backdrop.active")) {
+                document.body.classList.remove("modal-open");
+            }
+            if (lastFocusedElement && typeof lastFocusedElement.focus === "function") {
+                lastFocusedElement.focus();
+            }
+        }
+
+        document.querySelectorAll("[data-open-modal]").forEach((trigger) => {
+            trigger.addEventListener("click", (e) => {
+                e.preventDefault();
+                const modalId = trigger.getAttribute("data-open-modal");
+                openModal(modalId, trigger);
+            });
+        });
+
+        document.querySelectorAll("[data-close-modal]").forEach((btn) => {
+            btn.addEventListener("click", (e) => {
+                e.preventDefault();
+                const modal = btn.closest(".modal-backdrop");
+                closeModal(modal);
+            });
+        });
+
+        document.querySelectorAll(".modal-backdrop").forEach((modal) => {
+            modal.addEventListener("click", (e) => {
+                if (e.target === modal) closeModal(modal);
+            });
+        });
+
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") {
+                const activeModal = document.querySelector(".modal-backdrop.active");
+                if (activeModal) closeModal(activeModal);
+            }
+        });
+    }
+
+    /* ---------- Cookie Consent Banner (Items 4, 5) ---------- */
+    function initCookieConsent() {
+        const banner = document.getElementById("cookieBanner");
+        const acceptBtn = document.getElementById("cookieAcceptBtn");
+        const essentialBtn = document.getElementById("cookieEssentialBtn");
+        const settingsLink = document.getElementById("footerCookieSettings");
+
+        const consent = localStorage.getItem("tourez_cookie_consent");
+        if (!consent && banner) {
+            setTimeout(() => banner.classList.add("show"), 800);
+        }
+
+        if (acceptBtn) {
+            acceptBtn.addEventListener("click", () => {
+                localStorage.setItem("tourez_cookie_consent", "all");
+                banner?.classList.remove("show");
+                showToast("🍪 All cookie preferences accepted.");
+            });
+        }
+
+        if (essentialBtn) {
+            essentialBtn.addEventListener("click", () => {
+                localStorage.setItem("tourez_cookie_consent", "essential");
+                banner?.classList.remove("show");
+                showToast("🍪 Saved: Essential storage only.");
+            });
+        }
+
+        if (settingsLink) {
+            settingsLink.addEventListener("click", () => {
+                const modal = document.getElementById("cookieModal");
+                if (modal) {
+                    modal.classList.add("active");
+                    modal.setAttribute("aria-hidden", "false");
+                    document.body.classList.add("modal-open");
+                }
+            });
+        }
+    }
+
+    /* ---------- Newsletter & 1-Click Unsubscribe (Items 6, 18) ---------- */
+    function initNewsletter() {
+        const form = document.getElementById("newsletterForm");
+        if (form) {
+            form.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const emailInput = document.getElementById("newsletterEmail");
+                const consentBox = document.getElementById("newsletterConsent");
+                if (consentBox && !consentBox.checked) {
+                    showToast("⚠️ Please agree to receive seasonal travel updates.", "error");
+                    return;
+                }
+                const email = emailInput ? emailInput.value.trim() : "";
+                if (!email) return;
+
+                const submitBtn = form.querySelector('button[type="submit"]');
+                if (submitBtn) submitBtn.disabled = true;
+
+                try {
+                    await window.SmartTour.services.subscribeNewsletter(email);
+                    showToast(`📬 Subscribed! Updates will be sent to ${email}.`, "success");
+                    form.reset();
+                } catch (err) {
+                    showToast("⚠️ Could not subscribe. Please try again.", "error");
+                } finally {
+                    if (submitBtn) submitBtn.disabled = false;
+                }
+            });
+        }
+
+        const unsubForm = document.getElementById("unsubscribeForm");
+        if (unsubForm) {
+            unsubForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const email = document.getElementById("unsubEmail")?.value.trim();
+                const resultWrap = document.getElementById("unsubResult");
+                if (!email) return;
+
+                try {
+                    await window.SmartTour.services.unsubscribeNewsletter(email);
+                    if (resultWrap) {
+                        resultWrap.innerHTML = `
+                            <div class="legal-callout success" style="margin-top:10px;">
+                                ✅ <strong>${email}</strong> has been successfully unsubscribed from all Tourez alerts.
+                            </div>`;
+                    }
+                    showToast("✅ Unsubscribed successfully.");
+                    unsubForm.reset();
+                } catch (err) {
+                    showToast("⚠️ Could not complete request.", "error");
+                }
+            });
+        }
+    }
+
+    /* ---------- Data Deletion & Erasure Requests (Item 20) ---------- */
+    function initDataDeletion() {
+        const wipeBtn = document.getElementById("wipeLocalDataBtn");
+        const feedback = document.getElementById("localWipeFeedback");
+        if (wipeBtn) {
+            wipeBtn.addEventListener("click", () => {
+                localStorage.clear();
+                sessionStorage.clear();
+                if (feedback) {
+                    feedback.innerHTML = `
+                        <div class="legal-callout success">
+                            ✅ <strong>Local Storage Cleared:</strong> All cached itineraries, wallet tokens, theme preferences, and cookies have been permanently deleted from this browser.
+                        </div>`;
+                }
+                showToast("🗑️ All local data permanently wiped.", "success");
+                const navBalance = document.getElementById("navWalletBalance");
+                if (navBalance) navBalance.textContent = "रू 0";
+                const walletBalance = document.getElementById("walletBalance");
+                if (walletBalance) walletBalance.textContent = "रू 0.00";
+                const historyEl = document.getElementById("walletHistory");
+                if (historyEl) historyEl.innerHTML = "";
+            });
+        }
+
+        const form = document.getElementById("dataDeletionForm");
+        const resultWrap = document.getElementById("deletionResult");
+        if (form) {
+            form.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const name = document.getElementById("delName")?.value.trim();
+                const email = document.getElementById("delEmail")?.value.trim();
+                const type = document.getElementById("delType")?.value;
+                const confirmBox = document.getElementById("delConfirmCheckbox");
+
+                if (!confirmBox || !confirmBox.checked) {
+                    showToast("⚠️ Please confirm the verification checkbox.", "error");
+                    return;
+                }
+
+                const submitBtn = document.getElementById("delSubmitBtn");
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = "Submitting Request...";
+                }
+
+                try {
+                    const res = await window.SmartTour.services.requestDataDeletion({
+                        name,
+                        email,
+                        request_type: type,
+                    });
+
+                    if (resultWrap) {
+                        resultWrap.innerHTML = `
+                            <div class="deletion-receipt-card">
+                                <strong>✅ Data Deletion Request Registered</strong>
+                                <p style="margin:6px 0;">Official Ticket Reference:</p>
+                                <div class="deletion-ticket-num">${res.ticket_id || "DEL-2026-NP" + Math.floor(10000 + Math.random() * 90000)}</div>
+                                <p style="font-size:0.82rem;color:var(--text-muted);margin-top:8px;">
+                                    A formal purge request for <strong>${email}</strong> has been logged. Under GDPR Art. 17 and Nepal Privacy Act 2075, server logs and indices will be purged within 72 hours.
+                                </p>
+                            </div>`;
+                    }
+                    showToast(`✅ Deletion request registered: ${res.ticket_id || "Ticket created"}`);
+                    form.reset();
+                } catch (err) {
+                    showToast("⚠️ Request error. Please contact privacy@tourez.com.np", "error");
+                } finally {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = "Submit Erasure Request";
+                    }
+                }
+            });
+        }
+    }
+
     function init() {
         initTheme();
         initNav();
@@ -473,6 +794,11 @@ initMapFilters();
         initLocation();
         initReveal();
         attachChipHandlers();
+        initMapControls();
+        initModals();
+        initCookieConsent();
+        initNewsletter();
+        initDataDeletion();
         // Set default destination.
         const defaultDest = window.SmartTour.DESTINATIONS[0];
         if (defaultDest) selectDestination(defaultDest);

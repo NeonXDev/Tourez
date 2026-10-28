@@ -33,10 +33,19 @@ class Settings:
         ] or [
             "http://localhost:8080",
             "http://127.0.0.1:8080",
+            "http://localhost:5500",
+            "http://127.0.0.1:5500",
             "http://localhost:3000",
             "http://127.0.0.1:3000",
         ]
 
+        # Google Gemini configuration (primary / recommended)
+        self.gemini_api_key = _clean_secret(
+            os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or ""
+        )
+        self.gemini_model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash").strip()
+
+        # OpenAI configuration (alternative)
         self.openai_api_key = _clean_secret(os.getenv("OPENAI_API_KEY", ""))
         self.openai_model = os.getenv("OPENAI_MODEL", "gpt-4o-mini").strip()
 
@@ -59,7 +68,6 @@ class Settings:
             "OSM_USER_AGENT", "TourezHackathon/1.0 educational-travel-demo"
         ).strip()
 
-
         # Keyless global weather forecast. Open-Meteo automatically selects
         # suitable forecast models for the requested coordinates.
         self.open_meteo_url = os.getenv(
@@ -74,9 +82,24 @@ class Settings:
         ).rstrip("/")
 
     @property
+    def has_gemini(self) -> bool:
+        return bool(self.gemini_api_key)
+
+    @property
     def has_openai(self) -> bool:
         return bool(self.openai_api_key)
 
+    @property
+    def has_ai(self) -> bool:
+        return self.has_gemini or self.has_openai
+
+    @property
+    def ai_provider(self) -> str:
+        if self.has_gemini:
+            return "gemini"
+        if self.has_openai:
+            return "openai"
+        return "demo"
+
 
 settings = Settings()
-

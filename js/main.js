@@ -1,10 +1,12 @@
 document.addEventListener("DOMContentLoaded", () => {
+    if (!window.SmartTour) window.SmartTour = {};
+
     const savedLang = localStorage.getItem("smartTourLang");
     if (savedLang) {
         const sel = document.getElementById("langSelect");
         if (sel) sel.value = savedLang;
-        window.SmartTour.applyLanguage(savedLang);
-    } else {
+        if (window.SmartTour.applyLanguage) window.SmartTour.applyLanguage(savedLang);
+    } else if (window.SmartTour.detectLanguage) {
         const detected = window.SmartTour.detectLanguage();
         const sel = document.getElementById("langSelect");
         if (sel) {
@@ -13,11 +15,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Initialize theme toggle state.
     const theme = localStorage.getItem("smartTourTheme") || "light";
     document.documentElement.setAttribute("data-theme", theme);
 
-    // Initialize interactive map.
     const mapEl = document.getElementById("travelMap");
     if (mapEl && window.SmartTour.MapKit) {
         const mapInstance = window.SmartTour.MapKit.init(mapEl);
@@ -27,9 +27,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    window.SmartTour.UI.init();
-    window.SmartTour.AIChat.init();
-    window.SmartTour.CurrencyKit.init();
+    if (window.SmartTour.UI) window.SmartTour.UI.init();
+    if (window.SmartTour.AIChat) window.SmartTour.AIChat.init();
+    if (window.SmartTour.CurrencyKit) window.SmartTour.CurrencyKit.init();
     if (window.SmartTour.WalletKit) window.SmartTour.WalletKit.init();
 });
 
